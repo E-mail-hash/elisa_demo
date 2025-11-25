@@ -9,7 +9,7 @@ def timeIntegration(params):
     duration = params["duration"]
     RNGseed = params["seed"]
 
-    t = 
+    t = np.arange(0,1,21) 
 
 
 
