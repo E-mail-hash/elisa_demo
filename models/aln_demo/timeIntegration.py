@@ -46,9 +46,12 @@ def timeIntegration(params):
     siim = float(params['siim_init'])
     
     ###? how we manage the startind here?
+    '''
     Q_e = np.zeros((1, startind+len(t)))
     Q_e[:, :startind] = params['Q_e_init']
- 
+    '''
+    Q_e = np.dot(params['Q_e_init'], np.ones((1, len(t))))
+    Q_i = np.dot(params['Q_i_init'], np.ones((1, len(t))))
  
 
     # derivatives
@@ -56,6 +59,9 @@ def timeIntegration(params):
     mui = Jie_max * siem + Jii_max * siim
     mufe_rhs = (mue - mufe)/tau_exc
     mufi_rhs = (mui - mufi)/tau_inh
+
+    mufe = mufe + dt * mufe_rhs
+    mufi = mufi + dt * mufi_rhs
 
 
 @numba.njit()
