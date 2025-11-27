@@ -56,6 +56,9 @@ def timeIntegration(params):
 
 
     ## aln
+    N = 1
+    D = params['de']
+    D_ndt = int(D/dt)
 
     # neuron initialization
     ## thalamus
