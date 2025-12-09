@@ -60,26 +60,56 @@ def loadDefaultParams(seed=None):
     params.Jrt =  -0.5# -1.6 #-0.5 #1.6# change as HTC
 
     ### cortex
-    tau_e = 0.02
-    tau_i = 0.01
-    tau_c = 0.5
+    params.tau_e = 0.02
+    params.tau_i = 0.01
+    params.tau_c = 0.5
 
-    Ne = 0.8*10000
-    Ni = 0.2*10000
-    delta_c = 0.005
-    delta_c2 = 0.0054
+    params.Ne = 0.8*10000
+    params.Ni = 0.2*10000
+    params.delta_c = 0.005
+    params.delta_c2 = 0.0054
 
-    Pee  = 0.2
-    Pe2e = Pee2 = 0.01
-    Pie  =  0.2
-    Pte  =  0.02
-    Pii = 0.2
-    Pei = 0.2
-    Pe2i = Pei2 = 0.01
-    Pti = 0.02
+    params.ge = 5
+    params.gi = 2
+    params.Rm = 70
+    params.V_star = 30
 
-    Pet = 0.01
-    Per = 0.01
+    params.c_star = 10
+    params.gc = 3
+
+    params.Pee  = 0.2
+    params.Pe2e = params.Pee2 = 0.01
+    params.Pie  =  0.2
+    params.Pte  =  0.02
+    params.Pii = 0.2
+    params.Pei = 0.2
+    params.Pe2i = params.Pei2 = 0.01
+    params.Pti = 0.02
+
+    params.Pet = 0.01
+    params.Per = 0.01
+
+    params.Jee0 = 0.38
+    params.Je2e0 = 0.30
+    params.Jee20 = 0.67
+
+    params.Jet = 1.98
+    params.Je2t = 1.67
+    params.Jer = 3.24
+    params.Je2r = 3.42
+
+    params.Jie = -1.5
+    params.Jte = 0.30
+    params.Jii = -0.29
+    params.Jei = 0.43
+    params.Je2i = 1.8
+    params.Jti = 0.22
+
+    params.Jte2 = 0.45
+    params.Jei2 = 0.48
+    params.Jti2 = 0.18
+
+
 
 
     # initialization
