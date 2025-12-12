@@ -5,18 +5,20 @@ import defaultParameters as dp
 def timeIntegration(params):
     # simulation parameters
     dt = params["dt"]
-    sqrt_dt = np.sqrt(dt)
+    dt2 = dt * 1000
+    sqrt_dt2 = np.sqrt(dt2)
     duration = params["duration"]
     RNGseed = params["seed"]
 
     t = np.arange(1, round(duration, 6)/dt+1)
+    #t = np.arange(0, duration, dt)
 
     # neuron parameters
     ## aln
     de = params['de']
     di = params['di']
-    ndt_de = int(de/dt)
-    ndt_di = int(di/dt)
+    ndt_de = int(de/dt2)
+    ndt_di = int(di/dt2)
 
     startind = int(np.max([ndt_de, ndt_di]))
 
@@ -112,15 +114,18 @@ def timeIntegration(params):
 
  
     # it is just a scalar
-    Q_e_d = 0
-    Q_i_d = 0
+    #Q_e_d = 0
+    #Q_i_d = 0
 
     rate_thalamus = 0
 
-    # derivatives
-    for i in range(startind, len(t)):
-        noise_exc = Q_e[i]
-        noise_inh = Q_i[i]
+    def rhs(i, y):
+
+        mufe, mufi, IA = y[0], y[1], y[2]
+        seem, seim, siem, siim = np.maximum(y[3:7], 0)
+        seev, seiv, siev, siiv = np.maximum(y[7:11], 0)#y[7], y[8], y[9], y[10]
+        mue_ext, mui_ext = y[11], y[12]
+
 
         mue = Jee_max * seem + Jei_max * seim + mue_ext
         mui = Jie_max * siem + Jii_max * siim + mui_ext
@@ -129,6 +134,9 @@ def timeIntegration(params):
         Q_i_d = Q_i[i-ndt_di-1]
 
         z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*rate_thalamus
+        if 0 :#<= 1000:
+            print("Q_e_d:", Q_e_d)
+            print("z1ee:", z1ee)
         z1ei = cei*Ki*Q_i_d
         z1ie = cie*Ke*Q_e_d
         z1ii = cii*Ki*Q_i_d
@@ -136,6 +144,98 @@ def timeIntegration(params):
         z2ei = cei**2*Ki*Q_i_d
         z2ie = cie**2*Ke*Q_e_d
         z2ii = cii**2*Ki*Q_i_d
+
+        sigmae = np.sqrt(
+            2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
+            + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)
+            + sigmae_ext**2
+            )
+        sigmai = np.sqrt(
+            2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) 
+            + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)
+            + sigmai_ext**2
+            )
+        
+        ## look up from the table
+        xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)
+        xid1, yid1 = int(xid1), int(yid1)
+        #Q_e[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
+        Qe = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
+        Vmean_exc = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
+        tau_exc = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
+        
+        xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmai, Irange, dI, mufi)
+        xid1, yid1 = int(xid1), int(yid1)
+        Qi = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
+        #Q_i[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
+        tau_inh = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
+ 
+
+        # r.h.s
+        mufe_rhs = (mue - mufe)/tau_exc
+        mufi_rhs = (mui - mufi)/tau_inh
+
+
+        IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Qe)/tauA
+        #IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Q_e[i])/tauA
+
+        seem_rhs = ((1 - seem) * z1ee - seem)/tau_se
+        if 0 :#<= 1000:
+            print("seem:", seem)
+            print("i, seem_rhs:", i, seem_rhs)
+        seim_rhs = ((1 - seim) * z1ei - seim)/tau_si
+        siem_rhs = ((1 - siem) * z1ie - siem)/tau_se
+        siim_rhs = ((1 - siim) * z1ii - siim)/tau_si
+
+        ## ? why z1ee
+        seev_rhs = ((1 - seem)**2 * z2ee + (z2ee - 2*tau_se*(z1ee+1))*seev)/tau_se**2
+        seiv_rhs = ((1 - seim)**2 * z2ei + (z2ei - 2*tau_si*(z1ei+1))*seiv)/tau_si**2
+        siev_rhs = ((1 - siem)**2 * z2ie + (z2ie - 2*tau_se*(z1ie+1))*siev)/tau_se**2
+        siiv_rhs = ((1 - siim)**2 * z2ii + (z2ii - 2*tau_si*(z1ii+1))*siiv)/tau_si**2
+
+        mue_ext_rhs = (mue_ext_mean - mue_ext) / tau_ou
+        mui_ext_rhs = (mui_ext_mean - mui_ext) / tau_ou
+        
+        return np.array([mufe_rhs, mufi_rhs, IA_rhs, 
+                        seem_rhs, seim_rhs, siem_rhs, siim_rhs, 
+                        seev_rhs, seiv_rhs, siev_rhs, siiv_rhs, 
+                        mue_ext_rhs, mui_ext_rhs])
+
+    def rk4_step(y, dt, i):
+        k1 = rhs(i, y)
+        scale = np.zeros(len(k1))
+        scale[0:len(k1)] = dt 
+        tmp = y + 0.5*scale*k1               # 先正常算
+        tmp[7:11] = np.maximum(tmp[7:11], 0.0)  # 只裁 7-10
+        k2 = rhs(i, tmp)
+
+        tmp = y + 0.5*dt*k2
+        tmp[7:11] = np.maximum(tmp[7:11], 0.0)
+        k3 = rhs(i, tmp)
+
+        tmp = y + dt*k3
+        tmp[7:11] = np.maximum(tmp[7:11], 0.0)
+        k4 = rhs(i, tmp)
+        y_next = y + dt*(k1 + 2*k2 + 2*k3 + k4)/6.0 
+        return y_next    
+ 
+    '''
+    def rk4_step(y, dt, i):
+        k1 = rhs(i, y)
+        k2 = rhs(i, y + 0.5*dt*k1)
+        k3 = rhs(i, y + 0.5*dt*k2)
+        k4 = rhs(i, y + dt*k3)
+        y_next = y + dt*(k1 + 2*k2 + 2*k3 + k4)/6.0 
+        return y_next    
+    '''
+    def calc_Q(i):
+        Q_e_d = Q_e[i-ndt_de-1] # is it necessary to -1
+        Q_i_d = Q_i[i-ndt_di-1]
+
+        z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*rate_thalamus
+        z1ei = cei*Ki*Q_i_d
+        z1ie = cie*Ke*Q_e_d
+        z1ii = cii*Ki*Q_i_d
 
         sigmae = np.sqrt(
             2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
@@ -161,37 +261,19 @@ def timeIntegration(params):
         tau_inh = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
  
 
-        # r.h.s
-        mufe_rhs = (mue - mufe)/tau_exc
-        mufi_rhs = (mui - mufi)/tau_inh
+    # derivatives
+    for i in range(startind, len(t)):
+        noise_exc = Q_e[i]
+        noise_inh = Q_i[i]
 
-        IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Q_e[i])/tauA
+        y = np.array([mufe, mufi, IA, 
+                      seem, seim, siem, siim, 
+                      seev, seiv, siev, siiv,
+                      mue_ext, mui_ext])
+        y = rk4_step(y, dt2, i)
 
-        seem_rhs = ((1 - seem) * z1ee - seem)/tau_se
-        seim_rhs = ((1 - seim) * z1ei - seim)/tau_si
-        siem_rhs = ((1 - siem) * z1ie - siem)/tau_se
-        siim_rhs = ((1 - siim) * z1ii - siim)/tau_si
+        mufe, mufi, IA, seem, seim, siem, siim, seev, seiv, siev, siiv, mue_ext, mui_ext = y
 
-        ## ? why z1ee
-        seev_rhs = ((1 - seem)**2 * z2ee + (z2ee - 2*tau_se*(z1ee+1))*seev)/tau_se**2
-        seiv_rhs = ((1 - seim)**2 * z2ei + (z2ei - 2*tau_si*(z1ei+1))*seiv)/tau_si**2
-        siev_rhs = ((1 - siem)**2 * z2ie + (z2ie - 2*tau_se*(z1ie+1))*siev)/tau_se**2
-        siiv_rhs = ((1 - siim)**2 * z2ii + (z2ii - 2*tau_si*(z1ii+1))*siiv)/tau_si**2
-
-
-        mufe = mufe + dt * mufe_rhs
-        mufi = mufi + dt * mufi_rhs
-        seem = seem + dt * seem_rhs
-        seim = seim + dt * seim_rhs
-        siem = siem + dt * siem_rhs
-        siim = siim + dt * siim_rhs
-        
-        seev = seev + dt * seev_rhs
-        seiv = seiv + dt * seiv_rhs
-        siev = siev + dt * siev_rhs
-        siiv = siiv + dt * siiv_rhs
-       
-        # can this part be more simple?
         if seev < 0:
             seev = 0
         if siev < 0:
@@ -201,10 +283,13 @@ def timeIntegration(params):
         if siiv < 0:
             siiv = 0
 
-        IA = IA + dt * IA_rhs
+        # can this part be more simple?
+        mue_ext = mue_ext + sigma_ou*sqrt_dt2*noise_exc
+        mui_ext = mui_ext + sigma_ou*sqrt_dt2*noise_inh
 
-        mue_ext = mue_ext + (mue_ext_mean - mue_ext)*dt/tau_ou + sigma_ou*sqrt_dt*noise_exc
-        mui_ext = mui_ext + (mui_ext_mean - mui_ext)*dt/tau_ou + sigma_ou*sqrt_dt*noise_inh
+        calc_Q(i)
+
+
 
     return Q_e, Q_i, t
 
