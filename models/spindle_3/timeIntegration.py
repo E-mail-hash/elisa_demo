@@ -113,10 +113,12 @@ def timeIntegration(params):
     # ALN
     de = params['de']
     di = params['di']
+    dg = 13
     ndt_de = int(de/dt2)
     ndt_di = int(di/dt2)
+    ndt_dg = int(dg/dt2)
 
-    startind = int(np.max([ndt_de, ndt_di]))
+    startind = int(np.max([ndt_de, ndt_di, ndt_dg]))
 
     c_gl     = params['c_gl']       # global coupling strength between areas(unitless)
     Ke_gl    = params['Ke_gl']     # number of incoming E connections (to E population) from each area
@@ -248,7 +250,7 @@ def timeIntegration(params):
     a_chunk, b_chunk, c_chunk, u_chunk, ar_chunk, br_chunk, cr_chunk, dr_chunk, ur_chunk,
     Nr, Nt, Prr, Ptr, Prt, Jrr, Jtr, Jrt, # below for ALN
     dt2, mufe, mufi, IA, seem, seim, siem, siim, seev, seiv, siev, siiv, mue_ext, mui_ext,
-    ndt_de, ndt_di, Jee_max, Jei_max, Jie_max, Jii_max,
+    ndt_de, ndt_di, ndt_dg, Jee_max, Jei_max, Jie_max, Jii_max,
     cee, Ke, c_gl, Ke_gl, cei, Ki, cie, cii,
     sq_Jee_max, tau_se, taum, sq_Jei_max, tau_si, sigmae_ext,
     sq_Jie_max, sq_Jii_max, sigmai_ext,
@@ -283,7 +285,7 @@ def timeIntegration_njit_elementwise(
     a_chunk, b_chunk, c_chunk, u_chunk, ar_chunk, br_chunk, cr_chunk, dr_chunk, ur_chunk,
     Nr, Nt, Prr, Ptr, Prt, Jrr, Jtr, Jrt, # below for ALN
     dt2, mufe, mufi, IA, seem, seim, siem, siim, seev, seiv, siev, siiv, mue_ext, mui_ext,
-    ndt_de, ndt_di, Jee_max, Jei_max, Jie_max, Jii_max,
+    ndt_de, ndt_di, ndt_dg, Jee_max, Jei_max, Jie_max, Jii_max,
     cee, Ke, c_gl, Ke_gl, cei, Ki, cie, cii,
     sq_Jee_max, tau_se, taum, sq_Jei_max, tau_si, sigmae_ext,
     sq_Jie_max, sq_Jii_max, sigmai_ext,
@@ -294,6 +296,8 @@ def timeIntegration_njit_elementwise(
     tau_ou, sigma_ou, sqrt_dt2
     ):
 
+    # thalamus -> cortex
+    scale2 = 0.1 / 30 #* 3#5 (cortical-spindle-1-freq:13)             # 0.1/20 rate= 0.3
     def rhs(i, y):
         """
         返回 4 个导数：dVt/dt, dVr/dt, dut/dt, dur/dt
@@ -325,7 +329,7 @@ def timeIntegration_njit_elementwise(
         Qi = Q_m(Vi, 1)
         Qi2 = Q_m(Vi2, 1)
         '''
-        Qe = Q_e[i-ndt_de-1] # is it necessary to -1
+        Qe = Q_e[i-ndt_dg-1]  # is it necessary to -1
         Qi = Q_i[i-ndt_di-1]
         Qe2 = 0
         Qi2 = 0 
@@ -338,9 +342,10 @@ def timeIntegration_njit_elementwise(
                 return f_t_max / (1 + np.exp((u+f_t_th)/gamma_t))
             else:        # r
                 return f_r_max / (1 + np.exp((u+f_r_th)/gamma_r))
-
-        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + Ne*Pet*Jet*Qe + Ne*Pet*Je2t*Qe2
-        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt + Ne*Per*Jer*Qe + Ne*Per*Je2r*Qe2
+        
+        scale = 0 #10/2.5
+        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + Ne*Pet*Jet*Qe*scale + Ne*Pet*Je2t*Qe2
+        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt #+ Ne*Per*Jer*Qe*scale + Ne*Per*Je2r*Qe2
 
         '''
         def J(c, type):
@@ -379,28 +384,35 @@ def timeIntegration_njit_elementwise(
         Q_e_d = Q_e[i-ndt_de-1] # is it necessary to -1
         Q_i_d = Q_i[i-ndt_di-1]
 
-        z1ee = cee*Ke*Q_e_d #+ c_gl*Ke_gl*Qt # 100*Qt
+        Q_t_d = Q_t[i-ndt_dg-1]
+
+        #z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Qt*scale2 # 100*Qt
+        z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t_d*scale2 # 100*Qt
         if 0 :#<= 1000:
             print("Q_e_d:", Q_e_d)
             print("z1ee:", z1ee)
         z1ei = cei*Ki*Q_i_d
         z1ie = cie*Ke*Q_e_d
         z1ii = cii*Ki*Q_i_d
-        z2ee = cee**2*Ke*Q_e_d #+ c_gl**2*Ke_gl*Qt
+
+        z2ee = cee**2*Ke*Q_e_d + c_gl**2*Ke_gl*Q_t_d*scale2
+        #z2ee = cee**2*Ke*Q_e_d + c_gl**2*Ke_gl*Qt*scale2
         z2ei = cei**2*Ki*Q_i_d
         z2ie = cie**2*Ke*Q_e_d
         z2ii = cii**2*Ki*Q_i_d
 
         sigmae = np.sqrt(
+            np.maximum(( # change the logic here in case of sqrt(minus)
             2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
             + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)
-            + sigmae_ext**2
-            )
+            + sigmae_ext**2 ), 0.0
+            ))
         sigmai = np.sqrt(
+            np.maximum((
             2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) 
             + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)
-            + sigmai_ext**2
-            )
+            + sigmai_ext**2), 0.0
+            ))
         
         ## look up from the table
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)
@@ -418,12 +430,12 @@ def timeIntegration_njit_elementwise(
  
 
         # r.h.s
-        mufe_rhs = (mue - mufe)/tau_exc
-        mufi_rhs = (mui - mufi)/tau_inh
+        mufe_rhs = (mue - mufe)/(2*tau_exc) # i change tau_exc
+        mufi_rhs = (mui - mufi)/(2*tau_inh)
 
 
-        #IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Qe)/tauA
-        IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Q_e[i])/tauA
+        IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Qe)/tauA
+        #IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Q_e[i])/tauA
 
         seem_rhs = ((1 - seem) * z1ee - seem)/tau_se
         if 0 :#<= 1000:
@@ -472,21 +484,26 @@ def timeIntegration_njit_elementwise(
         Q_e_d = Q_e[i-ndt_de-1] # is it necessary to -1
         Q_i_d = Q_i[i-ndt_di-1]
 
-        z1ee = cee*Ke*Q_e_d #+ c_gl*Ke_gl*Q_t[i-1]
+        Q_t_d = Q_t[i-ndt_dg-1]
+
+        #z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t[i-1]*scale2#+ c_gl*Ke_gl*Q_t[i-1]
+        z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t_d*scale2#+ c_gl*Ke_gl*Q_t[i-1]
         z1ei = cei*Ki*Q_i_d
         z1ie = cie*Ke*Q_e_d
         z1ii = cii*Ki*Q_i_d
 
         sigmae = np.sqrt(
+            np.maximum(( # change the logic here in case of sqrt(minus)
             2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
             + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)
-            + sigmae_ext**2
-            )
+            + sigmae_ext**2 ), 0.0
+            ))
         sigmai = np.sqrt(
+            np.maximum((
             2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) 
             + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)
-            + sigmai_ext**2
-            )
+            + sigmai_ext**2), 0.0
+            ))
         
         ## look up from the table
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)

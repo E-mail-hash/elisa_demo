@@ -23,12 +23,12 @@ def loadDefaultParams(seed=None):
     params.f_t_th = 50
     params.f_r_th = 110 # 110
 
-    params.gamma_t = 0.005 #0.25 # # change as HTC
-    params.gamma_r = 0.005 #0.25##  change as HTC
+    params.gamma_t = 0.01#0.005 #0.25 # # change as HTC !!
+    params.gamma_r = 0.01#0.005 #0.25##  change as HTC !!
 
-    params.At = 0.22 #* 1000  #/ 8
+    params.At = 0.22 / 32#* 1000  #/ 8 !!
 
-    params.Ar = 0.11 #* 1000  #/ 8
+    params.Ar = 0.11 / 16#* 1000  #/ 8 !!
 
     ###
     params.tau_u_t = 0.22 #/2
@@ -56,9 +56,9 @@ def loadDefaultParams(seed=None):
     params.Ptr = 0.01
     params.Prt = 0.04
 
-    params.Jrr =  -0.09 #1.5 # change as HTC
-    params.Jtr =  3.42 #3.42 
-    params.Jrt =  -0.5 #1.6# change as HTC
+    params.Jrr =  -1.5#-0.09 #1.5 # change as HTC !!
+    params.Jtr =  3.42#*4 #3.42  !!
+    params.Jrt =  -1.6*4#-0.5 #1.6# change as HTC !!
 
     ### cortex
     params.tau_e = 0.02
@@ -94,7 +94,7 @@ def loadDefaultParams(seed=None):
     params.Je2e0 = 0.67 #0.30
     params.Jee20 = 0.30 #/ 2 #0.67
 
-    params.Jet = 1.98 #0.525 /2 #1.98
+    params.Jet = 1.98 #0.525 /2 #1.98 #hello?
     params.Je2t = 1.67 #0.85 /2 #1.67
     params.Jer = 3.24 #2.35 /2#3.24
     params.Je2r = 3.42 #2.35 /2#3.42
@@ -148,16 +148,16 @@ def loadDefaultParams(seed=None):
     params.Ke = 800.0
     params.Ki = 200.0
     
-    params.tau_ou = 5.0 # ms
-    params.sigma_ou = 0.00
-    params.mue_ext_mean = 2.8
+    params.tau_ou = 5.0*2 # ms # original 5.0
+    params.sigma_ou = 0.05
+    params.mue_ext_mean = 3.05 # 3.05for UP # down 2.33
     params.mui_ext_mean = 2.0
 
     params.sigmae_ext = 1.5
     params.sigmai_ext = 1.5
 
-    params.tau_se = 2.0
-    params.tau_si = 5.0
+    params.tau_se = 2.0*2 #original 2.0
+    params.tau_si = 5.0*2 #original 5.0
 
     params.cee = 0.3 # mV/ms
     params.cei = 0.3
@@ -172,7 +172,7 @@ def loadDefaultParams(seed=None):
     params.a = 0.0
     params.b = 15.0
     params.EA = -80.0
-    params.tauA = 1000.0
+    params.tauA = 1000.0*2 # original
 
     params.C = 200.0
     params.gl = 10.0
@@ -190,6 +190,7 @@ def loadDefaultParams(seed=None):
     # neuron initialization
     if seed:
         np.random.seed(seed)
+    '''
     params.mufe_init = 3*np.random.uniform(0,1)
     params.mufi_init = 3*np.random.uniform(0,1)
     params.seem_init = 0.5*np.random.uniform(0,1)
@@ -205,8 +206,21 @@ def loadDefaultParams(seed=None):
     params.Q_e_init = 0.05*np.random.uniform(0,1)
     params.Q_i_init = 0.05*np.random.uniform(0,1)
 
-    params.IA_init = 200.0*np.random.uniform(0,1)
-
+    params.IA_init = 15.5#200.0*np.random.uniform(0,1)
+    '''
+    params.mufe_init= 2.254193546474465
+    params.mufi_init= 0.02083659985675068
+    params.seem_init= 0.41286071688121806
+    params.seim_init= 0.0987963723843891
+    params.siem_init= 0.07898820392299111
+    params.siim_init= 0.10238927052099017
+    params.seev_init= 0.0005270353348137381
+    params.seiv_init= 0.0009332062103478369
+    params.siev_init= 0.008303141144249628
+    params.siiv_init= 0.008797997038684625
+    params.Q_e_init= 0.04129948079014575
+    params.Q_i_init= 0.024540466981406446
+    params.IA_init= 15.5
 
 
 
