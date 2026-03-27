@@ -10,7 +10,7 @@ def loadDefaultParams(seed=None):
 
     params.dt = 0.001
     params.duration = 10
-    params.model = "spindle1"
+    params.model = "spindle2"
     
     # model parameters
     params.tau_t = 0.044  #/ 2
@@ -22,12 +22,12 @@ def loadDefaultParams(seed=None):
     params.f_t_th = 50
     params.f_r_th = 110 # 110
 
-    params.gamma_t = 0.125 # 0.25 # change as HTC
-    params.gamma_r = 0.125 # 0.25# change as HTC
+    params.gamma_t = 0.01#0.005 #0.25 # # change as HTC
+    params.gamma_r = 0.01#0.005 #0.25##  change as HTC
 
-    params.At = 0.22 * 1000  #/ 8
+    params.At = 0.22 / 32#* 1000  #/ 8
 
-    params.Ar = 0.11 * 1000  #/ 8
+    params.Ar = 0.11 /16#* 1000  #/ 8
 
     ###
     params.tau_u_t = 0.22 #/2
@@ -55,9 +55,9 @@ def loadDefaultParams(seed=None):
     params.Ptr = 0.01
     params.Prt = 0.04
 
-    params.Jrr =  -0.09 #-1.5 #-0.09 #1.5 # change as HTC
-    params.Jtr =  3.42 #3.42 
-    params.Jrt =  -0.5# -1.6 #-0.5 #1.6# change as HTC
+    params.Jrr =  -1.5#0.09 #1.5 # change as HTC
+    params.Jtr =  3.42 *4#3.42 
+    params.Jrt =  -1.6*4#0.5 #1.6# change as HTC
 
     ### cortex
     params.tau_e = 0.02
@@ -90,13 +90,13 @@ def loadDefaultParams(seed=None):
     params.Per = 0.01
 
     params.Jee0 = 0.38
-    params.Je2e0 = 0.30
-    params.Jee20 = 0.67
+    params.Je2e0 = 0.67 #0.30
+    params.Jee20 = 0.30 #/ 2 #0.67
 
-    params.Jet = 1.98
-    params.Je2t = 1.67
-    params.Jer = 3.24
-    params.Je2r = 3.42
+    params.Jet = 1.98 #0.525 /2 #1.98
+    params.Je2t = 1.67 #0.85 /2 #1.67
+    params.Jer = 3.24 #2.35 /2#3.24
+    params.Je2r = 3.42 #2.35 /2#3.42
 
     params.Jie = -1.5
     params.Jte = 0.30
@@ -105,8 +105,11 @@ def loadDefaultParams(seed=None):
     params.Je2i = 1.8
     params.Jti = 0.22
 
+    params.Ji2e2 = -1.4
     params.Jte2 = 0.45
-    params.Jei2 = 0.48
+    params.Ji2i2 = -0.5
+    params.Je2i2 = 0.48
+    params.Jei2 = 1.62 
     params.Jti2 = 0.18
 
 
@@ -114,7 +117,7 @@ def loadDefaultParams(seed=None):
 
     # initialization
     params.V_t_init = -1
-    params.V_r_init = 1
+    params.V_r_init = -1
 
     params.Q_t_init = 0
     params.Q_r_init = 0
@@ -122,11 +125,13 @@ def loadDefaultParams(seed=None):
     params.u_t_init = 0
     params.u_r_init = 0
 
-    params.V_e_init = 0
-    params.V_i_init = 0
+    params.V_e_init = 1
+    params.V_i_init = 1
+    params.Q_e_init = 0
+    params.Q_i_init = 0
     params.c_init = 0
-    params.V_e2_init = 0
-    params.V_i2_init = 0
+    params.V_e2_init = 1
+    params.V_i2_init = 1
     params.c2_init = 0
 
 

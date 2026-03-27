@@ -4,8 +4,8 @@ import defaultParameters as dp
 
 def timeIntegration(params):
     # simulation parameters
-    dt = params["dt"]
-    dt2 = dt * 1000
+    dt = params["dt"] # 0.001 s
+    dt2 = dt * 1000   # 1 ms
     sqrt_dt2 = np.sqrt(dt2)
     duration = params["duration"]
     RNGseed = params["seed"]
@@ -60,7 +60,7 @@ def timeIntegration(params):
     sq_Jii_max = Jii_max ** 2
 
     
-    cee = cee * tau_se / Jee_max # ms?
+    cee = cee * tau_se / Jee_max # ms? 0.3 * 2 / 2.43
     cei = cei * tau_si / abs(Jei_max)
     cie = cie * tau_se / Jie_max
     cii = cii * tau_si / abs(Jii_max)
@@ -126,18 +126,23 @@ def timeIntegration(params):
         seev, seiv, siev, siiv = np.maximum(y[7:11], 0)#y[7], y[8], y[9], y[10]
         mue_ext, mui_ext = y[11], y[12]
 
-
+        # 2.43 * seem + (-3.3) * seim + 
+        # 2.60 * siem + (-1.64) * siim +
         mue = Jee_max * seem + Jei_max * seim + mue_ext
         mui = Jie_max * siem + Jii_max * siim + mui_ext
 
-        Q_e_d = Q_e[i-ndt_de-1] # is it necessary to -1
-        Q_i_d = Q_i[i-ndt_di-1]
+        Q_e_d = Q_e[i-ndt_de]#-1] # is it necessary to -1
+        Q_i_d = Q_i[i-ndt_di]#-1]
 
+        # 0.25*800*Q
         z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*rate_thalamus
-        if 0 :#<= 1000:
+        if 0:#i<= 1000:
             print("Q_e_d:", Q_e_d)
             print("z1ee:", z1ee)
         z1ei = cei*Ki*Q_i_d
+        if 0:#i<= 1000:
+            print("Q_i_d:", Q_i_d)
+            print("z1ei:", z1ei)
         z1ie = cie*Ke*Q_e_d
         z1ii = cii*Ki*Q_i_d
         z2ee = cee**2*Ke*Q_e_d + c_gl*Ke_gl*rate_thalamus
@@ -145,16 +150,23 @@ def timeIntegration(params):
         z2ie = cie**2*Ke*Q_e_d
         z2ii = cii**2*Ki*Q_i_d
 
-        sigmae = np.sqrt(
-            2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
-            + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)
-            + sigmae_ext**2
-            )
-        sigmai = np.sqrt(
-            2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) 
-            + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)
-            + sigmai_ext**2
-            )
+        tmp = 2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)+ sigmae_ext**2
+        if tmp<0:
+            print("temp for sigmae:", i,tmp)
+            print("Q_e_d:", Q_e_d)
+            print("z1ee:", z1ee)
+            print("Q_i_d:", Q_i_d)
+            print("z1ei:", z1ei)
+        tmp2 = 2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)+ sigmai_ext**2
+        if tmp2<0:
+            print("temp for sigmai:", i,tmp2)
+            print("Q_e_d:", Q_e_d)
+            print("z1ie:", z1ie)
+            print("Q_i_d:", Q_i_d)
+            print("z1ii:", z1ii)
+ 
+        sigmae = np.sqrt(2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)+ sigmae_ext**2)
+        sigmai = np.sqrt(2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)+ sigmai_ext**2)
         
         ## look up from the table
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)
@@ -201,6 +213,7 @@ def timeIntegration(params):
                         seev_rhs, seiv_rhs, siev_rhs, siiv_rhs, 
                         mue_ext_rhs, mui_ext_rhs])
 
+    '''
     def rk4_step(y, dt, i):
         k1 = rhs(i, y)
         scale = np.zeros(len(k1))
@@ -227,10 +240,10 @@ def timeIntegration(params):
         k4 = rhs(i, y + dt*k3)
         y_next = y + dt*(k1 + 2*k2 + 2*k3 + k4)/6.0 
         return y_next    
-    '''
+
     def calc_Q(i):
-        Q_e_d = Q_e[i-ndt_de-1] # is it necessary to -1
-        Q_i_d = Q_i[i-ndt_di-1]
+        Q_e_d = Q_e[i-ndt_de]#-1] # is it necessary to -1
+        Q_i_d = Q_i[i-ndt_di]#-1]
 
         z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*rate_thalamus
         z1ei = cei*Ki*Q_i_d

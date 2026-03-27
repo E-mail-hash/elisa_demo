@@ -29,7 +29,7 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
     
     params.tau_ou = 5.0 # ms
     params.sigma_ou = 0.00
-    params.mue_ext_mean = 2.8
+    params.mue_ext_mean = 3.05#2.8
     params.mui_ext_mean = 2.0
 
     params.sigmae_ext = 1.5
@@ -39,8 +39,8 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
     params.tau_si = 5.0
 
     params.cee = 0.3 # mV/ms
-    params.cei = 0.3
-    params.cie = 0.5
+    params.cei = 0.5
+    params.cie = 0.3
     params.cii = 0.5
 
     params.Jee_max = 2.43 # mV/ms

@@ -123,20 +123,34 @@ def timeIntegration_njit_elementwise(
         # 快速计算 u(V)
         def fu(u, m):
             if m == 0:   # t
-                return f_t_max / (1 + np.exp((u+f_t_th)/gamma_t))
+                x = (u+f_t_th)/gamma_t
+                if x >= 0:
+                    return f_t_max * (np.exp(-x) / (1 + np.exp(-x)))
+                else:
+                    return f_t_max / (1 + np.exp(x))
             else:        # r
-                return f_r_max / (1 + np.exp((u+f_r_th)/gamma_r))
-
-        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qt/1000.0
-        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr/1000.0 + Nt*Ptr*Jtr*Qt/1000.0
+                x = (u+f_r_th)/gamma_r
+                if x >= 0:
+                    return f_r_max * (np.exp(-x) / (1 + np.exp(-x)))
+                else:
+                    return f_r_max / (1 + np.exp(x))
+                #return f_r_max / (1 + np.exp((u+f_r_th)/gamma_r))
+        
+        # external stimulus
+        Qe = 20 / 1000
+        scale = 2
+        par = 8000 * 0.01 * 1.98
+        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + par*Qe*scale
+        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt
 
         # b(V) 函数
         def bV(V, m):
             Balance = 0
+            burst = -180.0
             if m == 0:  # t
-                return -200.0 if V - Balance < -0.1 else 0.0
+                return burst if V - Balance < -0.1 else 0.0
             else:       # r
-                return -200.0 if V - Balance <= 0.0 else 0.0
+                return burst if V - Balance <= 0.0 else 0.0
 
         dut = (bV(Vt,0) - ut) / tau_u_t
         dur = (bV(Vr,1) - ur) / tau_u_r

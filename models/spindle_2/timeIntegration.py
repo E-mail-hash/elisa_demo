@@ -5,7 +5,7 @@ import numpy as np
 import numba
 import defaultParameters as dp
 
-def timeintegration(params):
+def timeIntegration(params):
     # simulation parameters
     dt = params["dt"]
     duration = params["duration"]
@@ -54,13 +54,6 @@ def timeintegration(params):
     Jrt = params["Jrt"]
 
     # cortex
-    V_e    = params["V_e"]
-    V_i    = params["V_i"]
-    c      = params["c"]
-    V_e2   = params["V_e2"]
-    V_i2   = params["V_i2"]
-    c2     = params["c2"]
-
     tau_e  = params["tau_e"]
     tau_i  = params["tau_i"]
     tau_c  = params["tau_c"]
@@ -80,17 +73,23 @@ def timeintegration(params):
     Jee0   = params["Jee0"]
     Je2e0  = params["Je2e0"]
     Jee20  = params["Jee20"]
+
     Jet    = params["Jet"]
     Je2t   = params["Je2t"]
     Jer    = params["Jer"]
     Je2r   = params["Je2r"]
+
     Jie    = params["Jie"]
     Jte    = params["Jte"]
     Jii    = params["Jii"]
     Jei    = params["Jei"]
     Je2i   = params["Je2i"]
     Jti    = params["Jti"]
+
+    Ji2e2  = params["Ji2e2"]
     Jte2   = params["Jte2"]
+    Ji2i2  = params["Ji2i2"]
+    Je2i2  = params["Je2i2"]
     Jei2   = params["Jei2"]
     Jti2   = params["Jti2"]
 
@@ -114,6 +113,8 @@ def timeintegration(params):
     '''
     V_e = np.dot(params["V_e_init"], np.ones(len(t)))
     V_i = np.dot(params["V_i_init"], np.ones(len(t)))
+    Q_e = np.dot(params["Q_e_init"], np.ones(len(t)))
+    Q_i = np.dot(params["Q_i_init"], np.ones(len(t)))
     c = np.dot(params["c_init"], np.ones(len(t)))
     V_e2 = np.dot(params["V_e2_init"], np.ones(len(t)))
     V_i2 = np.dot(params["V_i2_init"], np.ones(len(t)))
@@ -139,11 +140,14 @@ def timeintegration(params):
 
     return timeIntegration_njit_elementwise(  
     startind, t, dt,
-    V_e, V_i, c, V_e2, V_i2, c2,
+    V_e, V_i, Q_e, Q_i, c, V_e2, V_i2, c2,
     tau_e, tau_i, tau_c,
     Ne, Ni, delta_c, delta_c2,
     ge, gi, Rm, V_star, c_star, gc, 
-    Jee0, Je2e0, Jee20, Jet, Je2t, Jer, Je2r, Jie, Jte, Jii, Jei, Je2i, Jti, Jte2, Jei2, Jti2,
+    Jee0, Je2e0, Jee20, 
+    Jet, Je2t, Jer, Je2r, 
+    Jie, Jte, Jii, Jei, Je2i, Jti, 
+    Ji2e2, Jte2, Ji2i2, Je2i2, Jei2, Jti2,
     Pee, Pe2e, Pee2, Pie, Pte, Pii, Pei, Pe2i, Pei2, Pti, Pet, Per,# for cortex
     V_t, tau_t, f_t_max, f_t_th, gamma_t, At,
     V_r, tau_r, f_r_max, f_r_th, gamma_r, Ar,
@@ -160,11 +164,14 @@ def timeintegration(params):
 # @numba.njit()
 def timeIntegration_njit_elementwise(
     startind, t, dt,
-    V_e, V_i, c, V_e2, V_i2, c2,
+    V_e, V_i, Q_e, Q_i, c, V_e2, V_i2, c2,
     tau_e, tau_i, tau_c,
     Ne, Ni, delta_c, delta_c2,
     ge, gi, Rm, V_star, c_star, gc, 
-    Jee0, Je2e0, Jee20, Jet, Je2t, Jer, Je2r, Jie, Jte, Jii, Jei, Je2i, Jti, Jte2, Jei2, Jti2,
+    Jee0, Je2e0, Jee20, 
+    Jet, Je2t, Jer, Je2r, 
+    Jie, Jte, Jii, Jei, Je2i, Jti, 
+    Ji2e2, Jte2, Ji2i2, Je2i2, Jei2, Jti2,
     Pee, Pe2e, Pee2, Pie, Pte, Pii, Pei, Pe2i, Pei2, Pti, Pet, Per,# for cortex
     V_t, tau_t, f_t_max, f_t_th, gamma_t, At,
     V_r, tau_r, f_r_max, f_r_th, gamma_r, Ar,
@@ -192,7 +199,7 @@ def timeIntegration_njit_elementwise(
                 gm = ge
             elif type == 1: # i
                 gm = gi 
-            return Rm / (1 + np.exp(-(V - V_star) / gm))
+            return Rm / (1 + np.exp(-(V - V_star) / gm)) # +0.1
 
         Qe = Q_m(Ve, 0)
         Qe2 = Q_m(Ve2, 0)
@@ -207,7 +214,7 @@ def timeIntegration_njit_elementwise(
             else:        # r
                 return f_r_max / (1 + np.exp((u+f_r_th)/gamma_r))
 
-        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qt + Ne*Pet*Jet*Qe + Ne*Pet*Je2t*Qe2
+        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + Ne*Pet*Jet*Qe + Ne*Pet*Je2t*Qe2
         dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt + Ne*Per*Jer*Qe + Ne*Per*Je2r*Qe2
 
         def J(c, type):
@@ -223,15 +230,15 @@ def timeIntegration_njit_elementwise(
         dVi = -Vi/tau_i + Ni*Pii*Jii*Qi + Ne*Pei*Jei*Qe + Ne*Pe2i*Je2i*Qe2 + Nt*Pti*Jti*Qt
         dc = -c/tau_c + delta_c*(Ne*Pee*Qe + Ne*Pe2e*Qe2)
 
-        dVe2 = -Ve2/tau_e + Ne*Pee*J(c2, "ee")*Qe2 + Ni*Pie*Jie*Qi2 + Ne*Pee2*J(c2,"ee2")*Qe + Nt*Pte*Jte2*Qt
-        dVi2 = -Vi2/tau_i + Ni*Pii*Jii*Qi2 + Ne*Pei*Jei*Qe2 + Ne*Pei2*Jei2*Qe + Nt*Pti*Jti2*Qt
+        dVe2 = -Ve2/tau_e + Ne*Pee*J(c2, "ee")*Qe2 + Ni*Pie*Ji2e2*Qi2 + Ne*Pee2*J(c2,"ee2")*Qe + Nt*Pte*Jte2*Qt
+        dVi2 = -Vi2/tau_i + Ni*Pii*Ji2i2*Qi2 + Ne*Pei*Je2i2*Qe2 + Ne*Pei2*Jei2*Qe + Nt*Pti*Jti2*Qt
         dc2 = -c2/tau_c + delta_c2*(Ne*Pee*Qe2 + Ne*Pee2*Qe)
 
         # b(V) 函数
         def bV(V, m):
             Balance = 0
             if m == 0:  # t
-                return -200.0 if V - Balance < -0.1 else 0.0
+                return -200.0 if V - Balance < -0.1 else 0.0 
             else:       # r
                 return -200.0 if V - Balance <= 0.0 else 0.0
 
@@ -247,11 +254,23 @@ def timeIntegration_njit_elementwise(
         k4 = rhs(0.0, y + dt*k3)
         y_next = y + dt*(k1 + 2*k2 + 2*k3 + k4)/6.0 
         return y_next    
+    
+    def Q_m(V, type):
+        if type == 0: # e
+            gm = ge
+        elif type == 1: # i
+            gm = gi 
+        return Rm / (1 + np.exp(-(V - V_star) / gm)) # +0.1
 
     for i in range(startind, len(t)):
-        Q_t[i-1] = RT_t * np.exp(Lt*u_t) / (1 + np.exp((VT_t-V_t[i-1])/gT_t)) + RB_t * (1-np.exp(Lt*u_t)) / (1 + np.exp((VB_t-V_t[i-1])/gB_t))
 
+        Q_t[i-1] = RT_t * np.exp(Lt*u_t) / (1 + np.exp((VT_t-V_t[i-1])/gT_t)) + RB_t * (1-np.exp(Lt*u_t)) / (1 + np.exp((VB_t-V_t[i-1])/gB_t))
         Q_r[i-1] = RT_r * np.exp(Lr*u_r) / (1 + np.exp((VT_r-V_r[i-1])/gT_r)) + RB_r * (1-np.exp(Lr*u_r)) / (1 + np.exp((VB_r-V_r[i-1])/gB_r))
+
+        Q_e[i-1] = Q_m(V_e[i-1], 0)
+        Q_i[i-1] = Q_m(V_i[i-1], 1)
+
+
 
         # RK4 单步
         y = np.array([V_t[i-1], V_r[i-1], u_t, u_r, V_e[i-1], V_i[i-1], c[i-1], V_e2[i-1], V_i2[i-1], c2[i-1]])
@@ -264,5 +283,5 @@ def timeIntegration_njit_elementwise(
         ur_chunk[i] = u_r
    
 
-    return Q_t, Q_r, V_t, V_r, V_e, V_i, c, V_e2, V_i2, c2, t
+    return Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t
 
