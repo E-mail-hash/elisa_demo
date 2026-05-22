@@ -15,7 +15,8 @@ def timeIntegration(params):
 
     t = np.arange(1, round(duration, 6)/dt+1)
 
-    c2tsc = params["c2tsc"]
+    c2tsc = params["c2tsc"] # cortex -> thalamus
+    scale2 = params["scale2"] # thalamus -> cortex
 
     # neuron parameters
     #startind = 1 
@@ -214,7 +215,7 @@ def timeIntegration(params):
     Irange = params['Irange']
 
     # for test
-    if RNGseed:
+    if True: #RNGseed:
         np.random.seed(RNGseed)
     Q_e[startind:] = np.random.standard_normal(len(range(startind, len(t))))
     Q_i[startind:] = np.random.standard_normal(len(range(startind, len(t))))
@@ -262,7 +263,7 @@ def timeIntegration(params):
     a, EA, tauA, b, 
     mue_ext_mean, mui_ext_mean, 
     tau_ou, sigma_ou, sqrt_dt2,
-    c2tsc
+    c2tsc, scale2 
     )
 
 
@@ -298,11 +299,11 @@ def timeIntegration_njit_elementwise(
     a, EA, tauA, b, 
     mue_ext_mean, mui_ext_mean, 
     tau_ou, sigma_ou, sqrt_dt2,
-    c2tsc
+    c2tsc, scale2
     ):
 
     # thalamus -> cortex
-    scale2 = 0.1/10 #5 #* 3#5 (cortical-spindle-1-freq:13)             # 0.1/20 rate= 0.3
+    # scale2 = 0.1/10 #5 #* 3#5 (cortical-spindle-1-freq:13)             # 0.1/20 rate= 0.3
     def rhs(i, y):
         """
         返回 4 个导数：dVt/dt, dVr/dt, dut/dt, dur/dt
@@ -447,8 +448,8 @@ def timeIntegration_njit_elementwise(
  
 
         # r.h.s
-        mufe_rhs = (mue - mufe)/(2*tau_exc) # i change tau_exc
-        mufi_rhs = (mui - mufi)/(2*tau_inh)
+        mufe_rhs = (mue - mufe)/(tau_exc) # i change tau_exc 2*
+        mufi_rhs = (mui - mufi)/(tau_inh) # i change tau_exc 2*
 
 
         IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Qe)/tauA
