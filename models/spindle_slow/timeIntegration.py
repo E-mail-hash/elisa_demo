@@ -215,10 +215,10 @@ def timeIntegration(params):
     Irange = params['Irange']
 
     # for test
-    if True: #RNGseed:
+    if 0: #True: #RNGseed:
         np.random.seed(RNGseed)
-    Q_e[startind:] = np.random.standard_normal(len(range(startind, len(t)))) 
-    Q_i[startind:] = np.random.standard_normal(len(range(startind, len(t)))) 
+        Q_e[startind:] = np.random.standard_normal(len(range(startind, len(t))))
+        Q_i[startind:] = np.random.standard_normal(len(range(startind, len(t))))
 
 
 
@@ -301,13 +301,9 @@ def timeIntegration_njit_elementwise(
     tau_ou, sigma_ou, sqrt_dt2,
     c2tsc, scale2
     ):
+    use_random = False
+    def rhs(i, y, record=False):
 
-    # thalamus -> cortex
-    # scale2 = 0.1/10 #5 #* 3#5 (cortical-spindle-1-freq:13)             # 0.1/20 rate= 0.3
-    def rhs(i, y):
-        """
-        返回 4 个导数：dVt/dt, dVr/dt, dut/dt, dur/dt
-        """
         Vt, Vr, ut, ur = y[0], y[1], y[2], y[3]
         Ve, Vi, c      = y[4], y[5], y[6]
         Ve2, Vi2, c2   = y[7], y[8], y[9]
@@ -321,24 +317,19 @@ def timeIntegration_njit_elementwise(
 
         Qt = RT_t * np.exp(Lt*ut) / (1 + np.exp((VT_t-Vt)/gT_t)) + RB_t * (1-np.exp(Lt*ut)) / (1 + np.exp((VB_t-Vt)/gB_t))
         Qr = RT_r * np.exp(Lr*ur) / (1 + np.exp((VT_r-Vr)/gT_r)) + RB_r * (1-np.exp(Lr*ur)) / (1 + np.exp((VB_r-Vr)/gB_r))
-
-        '''
-        def Q_m(V, type):
-            if type == 0: # e
-                gm = ge
-            elif type == 1: # i
-                gm = gi 
-            return Rm / (1 + np.exp(-(V - V_star) / gm)) # +0.1
-
-        Qe = Q_m(Ve, 0)
-        Qe2 = Q_m(Ve2, 0)
-        Qi = Q_m(Vi, 1)
-        Qi2 = Q_m(Vi2, 1)
-        '''
+        if record:
+            Q_t[i] = Qt
+            Q_r[i] = Qr
         Qe = Q_e[i-ndt_dg]#-1]  # is it necessary to -1
-        Qi = Q_i[i-ndt_di]#-1]
-        Qe2 = 0
-        Qi2 = 0 
+
+        Q_e_d = Q_e[i-ndt_de]#-1] # is it necessary to -1
+        Q_i_d = Q_i[i-ndt_di]#-1]
+
+        if use_random:
+            Q_t_d = random_Qt[i-ndt_dg]
+        else:
+            Q_t_d = Q_t[i-1] #-ndt_dg]#-1]
+
 
 
 
@@ -357,29 +348,10 @@ def timeIntegration_njit_elementwise(
                 else:
                     return f_r_max / (1 + np.exp(x))
         
-        # c2tsc = -5#1.5 #8
-        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + Ne*Pet*Jet*Qe*c2tsc + Ne*Pet*Je2t*Qe2
-        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt + Ne*Per*Jer*Qe*c2tsc #+ Ne*Per*Je2r*Qe2
+        dVt = -Vt/tau_t + fu(ut,0)/At + Nr*Prt*Jrt*Qr + Ne*Pet*Jet*Qe*c2tsc 
+        dVr = -Vr/tau_r + fu(ur,1)/Ar + Nr*Prr*Jrr*Qr + Nt*Ptr*Jtr*Qt + Ne*Per*Jer*Qe*c2tsc 
 
-        '''
-        def J(c, type):
-            if type == "ee":
-                J0 = Jee0
-            elif type == "e2e":
-                J0 = Je2e0
-            elif type == "ee2":
-                J0 = Jee20
-            return J0 / (1 + np.exp((c - c_star) / gc))
-       
-        dVe = -Ve/tau_e + Ne*Pee*J(c, "ee")*Qe + Ni*Pie*Jie*Qi + Ne*Pe2e*J(c, "e2e")*Qe2 + Nt*Pte*Jte*Qt
-        dVi = -Vi/tau_i + Ni*Pii*Jii*Qi + Ne*Pei*Jei*Qe + Ne*Pe2i*Je2i*Qe2 + Nt*Pti*Jti*Qt
-        dc = -c/tau_c + delta_c*(Ne*Pee*Qe + Ne*Pe2e*Qe2)
 
-        dVe2 = -Ve2/tau_e + Ne*Pee*J(c2, "ee")*Qe2 + Ni*Pie*Ji2e2*Qi2 + Ne*Pee2*J(c2,"ee2")*Qe + Nt*Pte*Jte2*Qt
-        dVi2 = -Vi2/tau_i + Ni*Pii*Ji2i2*Qi2 + Ne*Pei*Je2i2*Qe2 + Ne*Pei2*Jei2*Qe + Nt*Pti*Jti2*Qt
-        dc2 = -c2/tau_c + delta_c2*(Ne*Pee*Qe2 + Ne*Pee2*Qe)
-
-        '''
         # b(V) 函数
         def bV(V, m):
             Balance = 0
@@ -396,10 +368,6 @@ def timeIntegration_njit_elementwise(
         mue = Jee_max * seem + Jei_max * seim + mue_ext
         mui = Jie_max * siem + Jii_max * siim + mui_ext
 
-        Q_e_d = Q_e[i-ndt_de]#-1] # is it necessary to -1
-        Q_i_d = Q_i[i-ndt_di]#-1]
-
-        Q_t_d = Q_t[i-ndt_dg]#-1]
 
         #z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Qt*scale2 # 100*Qt
         z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t_d*scale2 # 100*Qt
@@ -432,28 +400,29 @@ def timeIntegration_njit_elementwise(
         ## look up from the table
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)
         xid1, yid1 = int(xid1), int(yid1)
-        #Q_e[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
         Qe = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
         Vmean_exc = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
-        V_e[i] = Vmean_exc
         tau_exc = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
-        
+        if record:
+            Q_e[i] = Qe
+            V_e[i] = Vmean_exc
+
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmai, Irange, dI, mufi)
         xid1, yid1 = int(xid1), int(yid1)
         Qi = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
         Vmean_inh = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
-        V_i[i] = Vmean_inh
-        #Q_i[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
         tau_inh = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
+        if record:
+            Q_i[i] = Qi
+            V_i[i] = Vmean_inh
  
 
         # r.h.s
-        mufe_rhs = (mue - mufe)/(tau_exc) # i change tau_exc 2*
-        mufi_rhs = (mui - mufi)/(tau_inh) # i change tau_exc 2*
+        mufe_rhs = (mue - mufe)/tau_exc #(2*tau_exc) # i change tau_exc
+        mufi_rhs = (mui - mufi)/tau_exc #/(2*tau_inh)
 
 
         IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Qe)/tauA
-        #IA_rhs = (a*(Vmean_exc-EA) - IA +tauA*b*Q_e[i])/tauA
 
         seem_rhs = ((1 - seem) * z1ee - seem)/tau_se
         if 0 :#<= 1000:
@@ -484,65 +453,24 @@ def timeIntegration_njit_elementwise(
         scale = np.zeros(len(y))
         scale[0:4] = dt
         scale[10:23] = dt2
-        k1 = rhs(i, y)
+        k1 = rhs(i, y, True)
         k2 = rhs(i, y + 0.5*scale*k1)
         k3 = rhs(i, y + 0.5*scale*k2)
         k4 = rhs(i, y + scale*k3)
         y_next = y + scale*(k1 + 2*k2 + 2*k3 + k4)/6.0 
         return y_next    
-    '''
-    def Q_m(V, type):
-        if type == 0: # e
-            gm = ge
-        elif type == 1: # i
-            gm = gi 
-        return Rm / (1 + np.exp(-(V - V_star) / gm)) # +0.1
-    '''
-    def calc_Q(i):
-        Q_e_d = Q_e[i-ndt_de] #-1] # is it necessary to -1
-        Q_i_d = Q_i[i-ndt_di] #-1]
 
-        Q_t_d = Q_t[i-ndt_dg] #-1]
+    np.random.seed(1)
+    mean_Qt = 0.248
+    std_Qt = 0.048
+    random_Qt = np.random.normal(mean_Qt, std_Qt, len(t))
+    random_Qt = np.maximum(random_Qt, 0)
 
-        #z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t[i-1]*scale2#+ c_gl*Ke_gl*Q_t[i-1]
-        z1ee = cee*Ke*Q_e_d + c_gl*Ke_gl*Q_t_d*scale2#+ c_gl*Ke_gl*Q_t[i-1]
-        z1ei = cei*Ki*Q_i_d
-        z1ie = cie*Ke*Q_e_d
-        z1ii = cii*Ki*Q_i_d
-
-        sigmae = np.sqrt(
-            np.maximum(( # change the logic here in case of sqrt(minus)
-            2*sq_Jee_max*seev*tau_se*taum / ((1+z1ee)*taum+tau_se) 
-            + 2*sq_Jei_max*seiv*tau_si*taum / ((1+z1ei)*taum+tau_si)
-            + sigmae_ext**2 ), 0.0
-            ))
-        sigmai = np.sqrt(
-            np.maximum((
-            2*sq_Jie_max*siev*tau_se*taum / ((1+z1ie)*taum+tau_se) 
-            + 2*sq_Jii_max*siiv*tau_si*taum / ((1+z1ii)*taum+tau_si)
-            + sigmai_ext**2), 0.0
-            ))
-        
-        ## look up from the table
-        xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmae, Irange, dI, mufe-IA/C)
-        xid1, yid1 = int(xid1), int(yid1)
-        Q_e[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
-        Vmean_exc = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
-        tau_exc = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
-        
-        xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmai, Irange, dI, mufi)
-        xid1, yid1 = int(xid1), int(yid1)
-        Q_i[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
-        tau_inh = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
- 
 
     for i in range(startind, len(t)):
 
-        noise_exc = 0 #Q_e[i] for beautiful SO turn off noise
-        noise_inh = 0 #Q_i[i]
-
-        Q_t[i-1] = RT_t * np.exp(Lt*u_t) / (1 + np.exp((VT_t-V_t[i-1])/gT_t)) + RB_t * (1-np.exp(Lt*u_t)) / (1 + np.exp((VB_t-V_t[i-1])/gB_t))
-        Q_r[i-1] = RT_r * np.exp(Lr*u_r) / (1 + np.exp((VT_r-V_r[i-1])/gT_r)) + RB_r * (1-np.exp(Lr*u_r)) / (1 + np.exp((VB_r-V_r[i-1])/gB_r))
+        noise_exc = Q_e[i]
+        noise_inh = Q_i[i]
 
 
         # RK4 单步
@@ -554,19 +482,12 @@ def timeIntegration_njit_elementwise(
 
         y = rk4_step(y, dt, dt2, i)
         V_t[i], V_r[i], u_t, u_r = y[0], y[1], y[2], y[3]
-        #V_e[i], V_i[i], c[i]     = y[4], y[5], y[6]
-        #V_e2[i], V_i2[i], c2[i]  = y[7], y[8], y[9]
+
         mufe, mufi, IA, seem, seim, siem, siim, seev, seiv, siev, siiv, mue_ext, mui_ext = y[10:23]
 
         mue_ext = mue_ext + sigma_ou*sqrt_dt2*noise_exc
         mui_ext = mui_ext + sigma_ou*sqrt_dt2*noise_inh
 
-        calc_Q(i)
-
-
-        u_chunk[i]  = u_t
-        ur_chunk[i] = u_r
-   
 
     return Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t
 

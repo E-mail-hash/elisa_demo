@@ -1,6 +1,8 @@
 import h5py
 import numpy as np
 
+# 为了找到更好的参数，拉开快慢纺锤的区别
+
 def loadDefaultParams(seed=None):
     lookupTableFileName = 'models/aln_demo/aln-precalc/quantities_cascade.h5'
     class struct(object):

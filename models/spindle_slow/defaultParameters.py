@@ -9,28 +9,19 @@ def loadDefaultParams(seed=None):
 
     params.dt = 0.0001 # s
     params.duration = 30
-    params.model = "spindle3"
+    params.model = "spindle_slow"
 
     params.seed = np.int64(0)
 
     # cortex -> thalamus
-    params.c2tsc = 0
-    params.scale2 = 0
+    params.c2tsc = 1.0
+    params.scale2 = 0.1 / 10
     
     # model parameters
-
-    
-    '''
     params.p1 = 1.0 #1.3
     params.p2 = 0.008 #0.008 #0.009
     params.p3 = 64.0 #88.0 #64.0
     params.p4 = 4.0
-
-    '''
-    params.p1 = 1.0 #1.3
-    params.p2 = 0.008 #0.008 #0.009
-    params.p3 = 1.0 #88.0 #64.0
-    params.p4 = 1.0
 
     params.tau_t = 0.044  / params.p1
     params.tau_r = 0.022  / params.p1
@@ -44,8 +35,8 @@ def loadDefaultParams(seed=None):
     params.gamma_t = params.p2#0.005 #0.25 # # change as HTC !!
     params.gamma_r = params.p2#0.005 #0.25##  change as HTC !!
 
-    params.At = 0.22 /64#/ params.p3#64#* 1000  #/ 8 !!
-    params.Ar = 0.11 /64#/ params.p3#64#* 1000  #/ 8 !!
+    params.At = 0.22 / params.p3#64#* 1000  #/ 8 !!
+    params.Ar = 0.11 / params.p3#64#* 1000  #/ 8 !!
 
 
     ###
@@ -55,10 +46,10 @@ def loadDefaultParams(seed=None):
     params.RT_r = 180
     params.RB_t = 250
     params.RB_r = 250
-    params.VT_t = 26 -9#26
-    params.VT_r = 23 -9#23
-    params.VB_t = 15 -9#15
-    params.VB_r = 15 -9#15
+    params.VT_t = 26 #26
+    params.VT_r = 23 #23
+    params.VB_t = 15 #15
+    params.VB_r = 15 #15
     params.gT_t = 6 
     params.gT_r = 3 
     params.gB_t = 0.9 
@@ -74,9 +65,9 @@ def loadDefaultParams(seed=None):
     params.Ptr = 0.01
     params.Prt = 0.04
 
-    params.Jrr =  -0.09 #-1.5 * 16#-0.09 #1.5 # change as HTC !! #add *16
-    params.Jtr =  3.42  #*params.p4#3.42  !!
-    params.Jrt =  -0.5 #-1.6 *4*params.p4#-0.5 #1.6# change as HTC !! #add *16
+    params.Jrr =  -1.5#-0.09 #1.5 # change as HTC !! #add *16
+    params.Jtr =  3.42*params.p4#3.42  !!
+    params.Jrt =  -1.6*params.p4#-0.5 #1.6# change as HTC !! #add *16
 
     ### cortex
     params.tau_e = 0.02
@@ -134,7 +125,25 @@ def loadDefaultParams(seed=None):
 
 
 
+    # initialization
+    params.V_t_init = 0
+    params.V_r_init = 0
 
+    params.Q_t_init = 0
+    params.Q_r_init = 0
+
+    params.u_t_init = 0
+    params.u_r_init = 0
+
+    params.V_e_init = 1
+    params.V_i_init = 1
+    #params.Q_e_init = 0
+    #params.Q_i_init = 0
+    
+    params.c_init = 0
+    params.V_e2_init = 1
+    params.V_i2_init = 1
+    params.c2_init = 0
 
 
     
@@ -150,7 +159,7 @@ def loadDefaultParams(seed=None):
     
     params.tau_ou = 5.0 *1.5 #2 # ms # original 5.0
     params.sigma_ou = 0.05
-    params.mue_ext_mean = 2.8 #2.43 #for slow #original 2.8 # 3.05for UP # down 2.33
+    params.mue_ext_mean = 2.33 #2.43 #2.8for LC # 3.05for UP # down 2.33
     params.mui_ext_mean = 2.0
 
     params.sigmae_ext = 1.5
@@ -190,6 +199,7 @@ def loadDefaultParams(seed=None):
     # neuron initialization
     if seed:
         np.random.seed(seed)
+    '''
     params.mufe_init = 3*np.random.uniform(0,1)
     params.mufi_init = 3*np.random.uniform(0,1)
     params.seem_init = 0.5*np.random.uniform(0,1)
@@ -205,30 +215,7 @@ def loadDefaultParams(seed=None):
     params.Q_e_init = 0.05*np.random.uniform(0,1)
     params.Q_i_init = 0.05*np.random.uniform(0,1)
 
-    params.IA_init = 200.0*np.random.uniform(0,1)
-
-
-    params.V_t_init = 0.001*np.random.uniform(0,1)
-    params.V_r_init = 0.001*np.random.uniform(0,1)
-
-    params.Q_t_init = 0
-    params.Q_r_init = 0
-
-    params.u_t_init = 0.001*np.random.uniform(0,1)
-    params.u_r_init = 0.001*np.random.uniform(0,1)
-
-    params.V_e_init = 1
-    params.V_i_init = 1
-    params.Q_e_init = 0
-    params.Q_i_init = 0
-    
-    params.c_init = 0
-    params.V_e2_init = 1
-    params.V_i2_init = 1
-    params.c2_init = 0
-
-
-
+    params.IA_init = 15.5#200.0*np.random.uniform(0,1)
     '''
     params.mufe_init= 2.254193546474465
     params.mufi_init= 0.02083659985675068
@@ -244,26 +231,7 @@ def loadDefaultParams(seed=None):
     params.Q_i_init= 0.024540466981406446
     params.IA_init= 15.5
 
-    # initialization
-    params.V_t_init = 0
-    params.V_r_init = 0
-
-    params.Q_t_init = 0
-    params.Q_r_init = 0
-
-    params.u_t_init = 0
-    params.u_r_init = 0
-
-    params.V_e_init = 1
-    params.V_i_init = 1
-    #params.Q_e_init = 0
-    #params.Q_i_init = 0
-    
-    params.c_init = 0
-    params.V_e2_init = 1
-    params.V_i2_init = 1
-    params.c2_init = 0
 
 
-    '''
+
     return params.__dict__

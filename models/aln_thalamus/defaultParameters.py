@@ -13,10 +13,12 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
     params.duration = 2 * 1000
     params.seed = np.int64(0) 
     
+    params.N_cor2tha = 1.0
+    params.N_tha2cor = 1.0
 
 
     # local parameters for both TCR & TRN
-    params.tau = 20.0
+    params.tau = 20.0 #: change for slow spindle
     params.Q_max = 400.0e-3  # 1/ms
     params.theta = -58.5  # mV
     params.sigma = 6.0
@@ -95,7 +97,7 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
     
     params.tau_ou = 5.0
     params.sigma_ou = 0.05
-    params.mue_ext_mean = 3.0
+    params.mue_ext_mean = 3.05
     params.mui_ext_mean = 1.0
 
     params.sigmae_ext = 1.5
@@ -117,7 +119,7 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
     params.a = 12.0
     params.b = 60.0
     params.EA = -80.0
-    params.tauA = 200.0
+    params.tauA = 1000.0
 
     params.C = 200.0
     params.gl = 10.0
@@ -149,6 +151,8 @@ def loadDefaultParams(lookupTableFileName=None, seed=None):
 
     params.Q_e_init = 0.05*np.random.uniform(0,1)
     params.Q_i_init = 0.05*np.random.uniform(0,1)
+    params.V_e_init = 1
+    params.V_i_init = 1
 
     params.IA_init = 200.0*np.random.uniform(0,1)
     

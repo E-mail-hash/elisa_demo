@@ -12,8 +12,8 @@ def timeIntegration(params):
     t = np.arange(0, duration, dt) 
 
     # neuron parameters
-    N_cor2tha = 1.2
-    N_tha2cor = 0.12
+    N_cor2tha = params["N_cor2tha"] #1.2
+    N_tha2cor = params["N_tha2cor"] #12 #0.12
     ## thalamus
     tau = params["tau"]
     Q_max = params["Q_max"]
@@ -135,11 +135,14 @@ def timeIntegration(params):
     # aln
     Q_e = np.dot(params['Q_e_init'], np.ones(len(t)))
     Q_i = np.dot(params['Q_i_init'], np.ones(len(t)))
-
+    V_e = np.dot(params["V_e_init"], np.ones(len(t)))
+    V_i = np.dot(params["V_i_init"], np.ones(len(t)))
     if RNGseed:
         np.random.seed(RNGseed)
-    Q_e[startind:] = np.random.standard_normal(len(range(startind, len(t))))
-    Q_i[startind:] = np.random.standard_normal(len(range(startind, len(t))))
+
+    if 1:
+        Q_e[startind:] = np.random.standard_normal(len(range(startind, len(t))))
+        Q_i[startind:] = np.random.standard_normal(len(range(startind, len(t))))
 
     mufe = float(params['mufe_init'])
     mufi = float(params['mufi_init'])
@@ -165,7 +168,9 @@ def timeIntegration(params):
         Q_t,
         Q_r,
         Q_e, 
-        Q_i
+        Q_i,
+        V_e,
+        V_i
     ) = timeIntegration_njit_elementwise(
         startind,
         t,
@@ -244,13 +249,13 @@ def timeIntegration(params):
         precalc_r, precalc_V, precalc_tau_mu,
         dI, ds,
         sigmarange, Irange,
-        Q_e, Q_i,
+        Q_e, Q_i, V_e, V_i,
         ndt_de, ndt_di, ndt_dall,
         mue_ext, mui_ext,
     )
 
 
-    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i
+    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i
  
 @numba.njit()
 def timeIntegration_njit_elementwise(
@@ -331,7 +336,7 @@ def timeIntegration_njit_elementwise(
     precalc_r, precalc_V, precalc_tau_mu,
     dI, ds,
     sigmarange, Irange,
-    Q_e, Q_i,
+    Q_e, Q_i, V_e, V_i, 
     ndt_de, ndt_di, ndt_dall,
     mue_ext, mui_ext,
 ):
@@ -471,12 +476,14 @@ def timeIntegration_njit_elementwise(
         Q_e[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
         Vmean_exc = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
         tau_exc = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
+        V_e[i] = Vmean_exc
         
         xid1, yid1, dxid, dyid = fast_interp2_opt(sigmarange, ds, sigmai, Irange, dI, mufi)
         xid1, yid1 = int(xid1), int(yid1)
         Q_i[i] = interpolate_values(precalc_r, xid1, yid1, dxid, dyid)
+        Vmean_inh = interpolate_values(precalc_V, xid1, yid1, dxid, dyid)
         tau_inh = interpolate_values(precalc_tau_mu, xid1, yid1, dxid, dyid)
- 
+        V_i[i] = Vmean_inh
 
         # r.h.s
         mufe_rhs = (mue - mufe)/tau_exc
@@ -523,7 +530,7 @@ def timeIntegration_njit_elementwise(
         mue_ext = mue_ext + (mue_ext_mean - mue_ext)*dt/tau_ou + sigma_ou*sqrt_dt*noise_exc
         mui_ext = mui_ext + (mui_ext_mean - mui_ext)*dt/tau_ou + sigma_ou*sqrt_dt*noise_inh
 
-    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i
+    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i
 
 @numba.njit(locals={"idxX": numba.int64, "idxY": numba.int64})
 def interpolate_values(table, xid1, yid1, dxid, dyid):

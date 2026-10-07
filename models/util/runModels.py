@@ -6,6 +6,8 @@ from models.demo_model import timeIntegration as ti_demo
 from models.spindle_demo import timeIntegration as ti_spindle1
 from models.spindle_2 import timeIntegration as ti_spindle2
 from models.spindle_3 import timeIntegration as ti_spindle3
+from models.spindle_00 import timeIntegration as ti_spindle00
+from models.spindle_slow import timeIntegration as ti_spindle_slow
 def runModels(traj=0, manual_params=None):
     if traj != 0:
         params = traj.parameters.f_to_dict(short_names=True, fast_access=True)
@@ -25,6 +27,11 @@ def runModels(traj=0, manual_params=None):
     if model == "spindle3":
         #t, Q_t, Q_r, V_t, V_r, a_chunk, b_chunk, c_chunk, u_chunk, ar_chunk, br_chunk, cr_chunk, dr_chunk, ur_chunk = runSpindle1(params)
         t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2 = runSpindle3(params)
+    if model == "spindle00":
+        #t, Q_t, Q_r, V_t, V_r, a_chunk, b_chunk, c_chunk, u_chunk, ar_chunk, br_chunk, cr_chunk, dr_chunk, ur_chunk = runSpindle1(params)
+        t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2 = runSpindle00(params)
+    if model == "spindle_slow":
+        t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2 = runSpindleSlow(params)
     if model == "simp":
         Q_e, Q_i, t = runAlnDemo(params)
     if model == "demo":
@@ -35,7 +42,7 @@ def runModels(traj=0, manual_params=None):
     if model == "aln":
         rates_exc, rates_inh, t, mufe, mufi = runAln(params)
     if model == "aln-thalamus":
-        t, V_t, V_r, Q_t, Q_r, Q_e, Q_i = runAlnThalamus(params)   
+        t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i = runAlnThalamus(params)   
 
     if traj != 0:
         if model == "spindle3":
@@ -58,6 +65,10 @@ def runModels(traj=0, manual_params=None):
             return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i,V_e, V_i, c, V_e2, V_i2, c2
         if model == "spindle3":
             return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i,V_e, V_i, c, V_e2, V_i2, c2
+        if model == "spindle00":
+            return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i,V_e, V_i, c, V_e2, V_i2, c2
+        if model == "spindle_slow":
+            return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i,V_e, V_i, c, V_e2, V_i2, c2
         if model == "simp":
             return t, Q_e, Q_i
         if model == "thalamus":
@@ -65,13 +76,21 @@ def runModels(traj=0, manual_params=None):
         if model == "aln":
             return t, rates_exc, rates_inh, mufe, mufi
         if model == "aln-thalamus":
-            return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i
+            return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i
 def runSpindle2(params):
     Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t = ti_spindle2.timeIntegration(params)
     return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2
 def runSpindle3(params):
     Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t = ti_spindle3.timeIntegration(params)
     return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2
+def runSpindle00(params):
+    Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t = ti_spindle00.timeIntegration(params)
+    return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2
+
+def runSpindleSlow(params):
+    Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2, t = ti_spindle_slow.timeIntegration(params)
+    return t, Q_t, Q_r, V_t, V_r, Q_e, Q_i, V_e, V_i, c, V_e2, V_i2, c2
+
 
 
 def runSpindle1(params):
@@ -81,8 +100,8 @@ def runSpindle1(params):
     #return t, Q_t, Q_r, V_t, V_r, a_chunk, b_chunk, c_chunk, u_chunk, ar_chunk, br_chunk, cr_chunk, dr_chunk, ur_chunk
 
 def runAlnThalamus(params):
-    t, V_t, V_r, Q_t, Q_r, Q_e, Q_i = ti_aln_thalamus.timeIntegration(params)
-    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i
+    t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i = ti_aln_thalamus.timeIntegration(params)
+    return t, V_t, V_r, Q_t, Q_r, Q_e, Q_i, V_e, V_i
 
 def runAlnDemo(params):
     Q_e, Q_i, t = ti_aln_demo.timeIntegration(params)
